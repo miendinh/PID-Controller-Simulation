@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PID Controller Simulation</title>
+</head>
+<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<!-- Three.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        renderMathInElement(document.body, {
+            delimiters: [
+                { left: '$$', right: '$$', display: true },
+                { left: '$', right: '$', display: false }
+            ]
+        });
+    });
+</script>
+</head>
+
+<body>
+    <div class="container">
+        <h1>PID Controller Simulator</h1>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="sim-with-controls">
+                    <div class="simulation-container">
+                        <canvas id="simCanvas"></canvas>
+                        <div class="overlay-info">
+                            <div class="hud-container">
+                                <div class="hud-stat-group left">
+                                    <div class="hud-item">
+                                        <span class="hud-label">Angle</span>
+                                        <span class="hud-value-group">
+                                            <span id="angleValue" class="hud-val">0.00</span>
+                                            <span class="hud-unit">°</span>
+                                        </span>
+                                    </div>
+                                    <div class="hud-item">
+                                        <span class="hud-label">Ang.Vel</span>
+                                        <span class="hud-value-group">
+                                            <span id="dthetaValue" class="hud-val">0.00</span>
+                                            <span class="hud-unit">rad/s</span>
+                                        </span>
+                                    </div>
+                                    <div class="hud-item">
+                                        <span class="hud-label">Pos</span>
+                                        <span class="hud-value-group">
+                                            <span id="xValue" class="hud-val">0.00</span>
+                                            <span class="hud-unit">m</span>
+                                        </span>
+                                    </div>
+                                    <div class="hud-item">
+                                        <span class="hud-label">Vel</span>
+                                        <span class="hud-value-group">
+                                            <span id="dxValue" class="hud-val">0.00</span>
+                                            <span class="hud-unit">m/s</span>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="hud-stat-group right">
+                                    <div class="hud-item main-motor">
+                                        <span class="hud-label">Motor Force</span>
+                                        <span class="hud-value-group">
+                                            <span id="motorValue" class="hud-val">0.00</span>
+                                            <span class="hud-unit">N</span>
+                                        </span>
+                                    </div>
+                                    <div class="pid-mini-bars">
+                                        <div class="pid-bar-item" title="Proportional">
+                                            <span class="pid-label p-color">P</span>
+                                            <span id="pTerm" class="pid-val">0.0</span>
+                                        </div>
+                                        <div class="pid-bar-item" title="Integral">
+                                            <span class="pid-label i-color">I</span>
+                                            <span id="iTerm" class="pid-val">0.0</span>
+                                        </div>
+                                        <div class="pid-bar-item" title="Derivative">
+                                            <span class="pid-label d-color">D</span>
+                                            <span id="dTerm" class="pid-val">0.0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button id="pushLeftBtn" class="btn secondary" aria-label="Push Left">
+                            <!-- Arrow Left Icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <line x1="19" y1="12" x2="5" y2="12"></line>
+                                <polyline points="12 19 5 12 12 5"></polyline>
+                            </svg>
+                        </button>
+                        <button id="resetBtn" class="btn primary" aria-label="Reset Robot">
+                            <!-- Reset Icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                <path d="M3 3v5h5" />
+                            </svg>
+                        </button>
+                        <button id="pushRightBtn" class="btn secondary" aria-label="Push Right">
+                            <!-- Arrow Right Icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="education-container">
+                    <h3>🔍 Detailed PID Explanation</h3>
+                    <div class="equation-box">
+                        $$ \text{Output} = \textcolor{#ef4444}{K_p e(t)} + \textcolor{#22d3ee}{K_i \int_{0}^{t}
+                        e(\tau)d\tau} + \textcolor{#4ade80}{K_d \frac{de(t)}{dt}} $$
+                    </div>
+
+                    <div class="explanation-grid">
+                        <div class="expl-item">
+                            <h4 class="term-p">P - Proportional ($K_p$)</h4>
+                            <p>Reacts to the <b>current error</b> $e(t)$. Acts like a spring: $F \propto -x$. Large
+                                error $\rightarrow$ Strong push.</p>
+                        </div>
+                        <div class="expl-item">
+                            <h4 class="term-d">D - Derivative ($K_d$)</h4>
+                            <p>Reacts to the <b>rate of change</b> $\frac{de(t)}{dt}$. Acts like a damper. Resists rapid
+                                motion to reduce oscillation.</p>
+                        </div>
+                        <div class="expl-item full-width">
+                            <h4 class="term-i">I - Integral ($K_i$) - Why needed?</h4>
+                            <p>Reacts to <b>accumulated error</b> $\int e(\tau)d\tau$.</p>
+                            <p class="why-note">❓ <b>Why needed?</b> If a constant wind causes a steady-state error
+                                $e_{ss} \neq 0$, the P term alone cannot fix it ($K_p e_{ss} = F_{wind}$). The I term
+                                sums up this error until the force is strong enough to push the robot back to $\theta =
+                                0$.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls-container">
+                <div class="control-group">
+                    <label for="kp" style="color: #ef4444;">Kp (Proportional)</label>
+                    <input type="range" id="kp" min="0" max="200" step="0.1" value="120" class="slider-p">
+                    <div class="value-display" id="kpVal" style="color: #ef4444;">120.0</div>
+                </div>
+
+                <div class="control-group">
+                    <label for="ki" style="color: #22d3ee;">Ki (Integral)</label>
+                    <input type="range" id="ki" min="0" max="20" step="0.01" value="0.5" class="slider-i">
+                    <div class="value-display" id="kiVal" style="color: #22d3ee;">0.50</div>
+                </div>
+
+                <div class="control-group">
+                    <label for="kd" style="color: #4ade80;">Kd (Derivative)</label>
+                    <input type="range" id="kd" min="0" max="200" step="0.1" value="45" class="slider-d">
+                    <div class="value-display" id="kdVal" style="color: #4ade80;">45.0</div>
+                </div>
+
+                <div class="control-group">
+                    <label for="wind">Wind Force (Disturbance)</label>
+                    <input type="range" id="wind" min="-5" max="5" step="0.1" value="0">
+                    <div class="value-display" id="windVal">0.0 (Test Ki here)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
